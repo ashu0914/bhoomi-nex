@@ -246,9 +246,14 @@ const API_BASE="http://127.0.0.1:8000"; // change if your backend runs elsewhere
 
 // ---- Supabase auth (login component) ---------------------------------
 // Fill these in from Supabase Dashboard → Project Settings → API.
-const SUPABASE_URL="https://YOUR-PROJECT-REF.supabase.co";
-const SUPABASE_ANON_KEY="YOUR-ANON-PUBLIC-KEY";
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const SUPABASE_URL="https://vlgjaomwnxefgjcdyutx.supabase.co";
+
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZ2phb213bnhlZmdqY2R5dXR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQxMzYsImV4cCI6MjEwNTA0MDEzNn0.sfgVj12QSaa7lzHgbd0ClN1bKHckxER2tt72EYUKlAk";
+
+const sb=supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 let authMode="signin";
 // Supabase now decides who gets in. This seeded account is used only in the
 // background, after Supabase confirms identity, so the existing dashboard/
