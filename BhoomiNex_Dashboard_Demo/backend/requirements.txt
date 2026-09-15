@@ -1,0 +1,31 @@
+# Core API
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+
+# Database (SQLite by default; set DATABASE_URL to a postgresql:// URL to
+# use PostgreSQL instead — no code changes needed, see .env.example)
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
+
+# Auth
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
+# Document / OCR pipeline
+pillow>=10.3.0
+numpy>=1.26.0
+pytesseract>=0.3.10
+pdf2image>=1.17.0
+pypdf>=4.2.0
+
+# Config
+python-dotenv>=1.0.1
+
+# GIS: per-record geometry import (GeoJSON + shapefile ZIP -> WGS84)
+pyshp>=2.3.1
+shapely>=2.0.0
+pyproj>=3.6.0

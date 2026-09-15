@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BhoomiNex — Land Records Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --green:#079447; --green-dark:#087b3d; --mint:#e9f8f1; --ink:#182026;
+  --muted:#68727a; --line:#e7ecef; --bg:#f7fafb; --card:#fff;
+  --blue:#268bd2; --purple:#7c4dcc; --orange:#f28a2e; --red:#e45d55;
+  --shadow:0 8px 26px rgba(20,40,35,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:flex}
+.sidebar{width:230px;background:#fff;border-right:1px solid var(--line);padding:15px 12px;position:fixed;left:0;top:0;bottom:0;z-index:10;transition:.25s}
+.brand{height:48px;display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:20px}
+.brand img{width:42px;height:42px;object-fit:cover;border-radius:50%}
+.brand strong{font-size:18px}
+.menu{display:flex;flex-direction:column;gap:7px}
+.nav{border:0;background:transparent;text-align:left;padding:12px 13px;border-radius:9px;color:#4e5961;display:flex;align-items:center;gap:13px;font-weight:600}
+.nav:hover{background:#f0f7f3;color:var(--green)}
+.nav.active{background:var(--green);color:#fff;box-shadow:0 5px 14px rgba(7,148,71,.22)}
+.icon{width:22px;text-align:center;font-size:18px}
+.sidebar.collapsed{width:78px}
+.sidebar.collapsed .brand span,.sidebar.collapsed .nav span{display:none}
+.sidebar.collapsed .nav{justify-content:center}
+.main{margin-left:230px;width:calc(100% - 230px);transition:.25s}
+.sidebar.collapsed + .main{margin-left:78px;width:calc(100% - 78px)}
+.topbar{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:8}
+.top-left{display:flex;align-items:center;gap:20px}
+.hamb{border:0;background:transparent;font-size:24px;color:#4f5960}
+.page-title{font-size:18px;font-weight:750}
+.top-right{display:flex;align-items:center;gap:18px}
+.bell{position:relative;border:0;background:transparent;font-size:21px}
+.dot{position:absolute;width:7px;height:7px;background:#e45757;border-radius:50%;right:0;top:1px}
+.profile{border:0;background:transparent;display:flex;gap:10px;align-items:center;text-align:left}
+.avatar{width:40px;height:40px;border-radius:50%;background:#0d5960;color:#fff;display:grid;place-items:center;font-weight:800}
+.profile small{color:var(--muted);display:block;margin-top:2px}
+.content{padding:26px 30px 38px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px}
+.hero h1{margin:0 0 7px;font-size:28px}
+.hero p{margin:0;color:#5f6970}
+.motto{background:var(--mint);border-radius:10px;padding:15px 20px;min-width:320px}
+.motto b{color:var(--green-dark);font-size:16px}
+.motto div{font-size:12px;color:#5f6e68;margin-top:7px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+.card{background:var(--card);border:1px solid #edf1f2;border-radius:10px;box-shadow:var(--shadow)}
+.stat{padding:20px;display:flex;align-items:center;gap:15px}
+.stat .sicon{width:45px;height:45px;border-radius:9px;display:grid;place-items:center;font-size:22px}
+.blue{background:#e8f4fd;color:#1987d1}.green{background:#e8f8ef;color:#16a45a}
+.purple{background:#f0eafd;color:#7850d3}.orange{background:#fff0df;color:#ed8525}
+.stat b{font-size:25px}.stat small{display:block;color:#606a71;margin-top:3px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}
+.panel{padding:20px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel-head h2{font-size:19px;margin:0}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:13px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:#68737b;font-weight:700;font-size:13px}
+.status{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:750}
+.verified{background:#e9f8ee;color:#15964d}.processed{background:#eaf3fb;color:#3382bb}
+.review{background:#fff1e4;color:#df7d21}
+.action{border:0;background:#e9f3ff;color:#3d86bf;border-radius:6px;padding:7px 11px;font-weight:700}
+.action:hover{background:#d8ebff}
+.donut-area{display:flex;align-items:center;gap:20px}
+.donut{width:190px;height:190px;border-radius:50%;background:conic-gradient(#258bd2 0 28%,#19a56a 28% 54%,#87b84d 54% 66%,#f2a42e 66% 70%,#7d50c9 70% 84%,#e65d55 84% 100%);position:relative;display:grid;place-items:center}
+.donut:after{content:"";width:105px;height:105px;background:#fff;border-radius:50%;position:absolute}
+.donut-center{position:absolute;z-index:2;text-align:center;font-weight:800;font-size:22px}.donut-center small{display:block;font-size:12px;color:#6a7278}
+.legend{display:grid;gap:11px}.legend span{display:flex;align-items:center;gap:9px;font-size:13px}.sw{width:10px;height:10px;border-radius:50%;display:inline-block}
+.empty{padding:50px;text-align:center;color:#7a8389}
+.view{display:none}.view.active{display:block}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px}
+.input{border:1px solid #dce3e6;background:#fff;border-radius:8px;padding:11px 13px;outline:none}
+.input:focus{border-color:#54aa7b;box-shadow:0 0 0 3px rgba(84,170,123,.12)}
+.primary{border:0;background:var(--green);color:#fff;padding:11px 16px;border-radius:8px;font-weight:750}
+.primary:hover{background:var(--green-dark)}
+.secondary{border:1px solid #d7e0e4;background:#fff;padding:10px 15px;border-radius:8px;font-weight:700}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.mini{padding:18px}.mini h3{margin:0 0 8px}.mini p{color:var(--muted);margin:0}
+.map{height:400px;border-radius:12px;background:linear-gradient(135deg,#e9f7ef,#dceff8);position:relative;overflow:hidden}
+.map:before{content:"";position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(255,255,255,.55) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.55) 1px,transparent 1px);background-size:45px 45px}
+.india{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:100px;opacity:.13}
+.pin{position:absolute;background:var(--green);color:#fff;padding:7px 10px;border-radius:18px;font-size:12px;font-weight:700}
+.pin.p1{left:45%;top:35%}.pin.p2{left:59%;top:54%}.pin.p3{left:34%;top:62%}
+#leafletMap{height:100%;width:100%;border-radius:12px;z-index:1}
+.leaflet-popup-content b{color:var(--green-dark)}
+.verify-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.doc-area{min-height:420px;border-radius:10px;background:#f4f7f6;border:1px dashed #d6e0e0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.doc-area img{max-width:100%;max-height:520px;object-fit:contain}
+.doc-area iframe{width:100%;height:520px;border:0}
+.vfield{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.vfield:last-child{border-bottom:0}
+.vfield-head{display:flex;align-items:center;justify-content:space-between}
+.vfield-head b{font-size:13px;color:#4e5961}
+.conf-badge{font-size:11px;font-weight:750;padding:3px 9px;border-radius:999px}
+.conf-high{background:#e9f8ee;color:#15964d}.conf-medium{background:#fff1e4;color:#df7d21}.conf-low{background:#fdeceb;color:#c73f36}
+.vfield input{width:100%}
+.queue-empty{padding:14px;color:var(--muted);font-size:14px}
+.queue-pick{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:8px;border:1px solid var(--line);margin-bottom:8px;cursor:pointer}
+.queue-pick:hover{border-color:#b8d8c6;background:#f7fcf9}
+.queue-pick.active{border-color:var(--green);background:var(--mint)}
+.queue-pick b{font-size:13px}.queue-pick small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.toggle{width:48px;height:27px;border-radius:30px;background:#cbd5d9;border:0;position:relative}.toggle:after{content:"";width:21px;height:21px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px #aaa}.toggle.on{background:var(--green)}.toggle.on:after{left:24px}
+.setting{display:flex;justify-content:space-between;align-items:center;padding:17px 0;border-bottom:1px solid var(--line)}
+.modal-back{position:fixed;inset:0;background:rgba(20,30,25,.45);display:none;align-items:center;justify-content:center;z-index:30}
+.modal-back.show{display:flex}
+.modal{width:min(520px,92vw);background:#fff;border-radius:14px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h2{margin-top:0}.drop{border:2px dashed #b8d8c6;padding:30px;text-align:center;border-radius:12px;background:#f7fcf9}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.toast{position:fixed;right:25px;bottom:25px;background:#1f2d27;color:#fff;padding:12px 16px;border-radius:9px;box-shadow:var(--shadow);display:none;z-index:110}
+.toast.show{display:block}
+.validation-shell{max-width:760px;margin:0 auto}.step-label{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 13px;border-radius:7px;background:#182026;color:#fff;font-size:13px;font-weight:750}.validation-card{overflow:hidden}.validation-head{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--line)}.validation-brand{display:flex;align-items:center;gap:9px;font-size:18px;font-weight:800}.validation-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--mint);color:var(--green);font-size:17px}.validation-user{display:flex;align-items:center;gap:10px}.validation-user .avatar{width:34px;height:34px;background:var(--green);font-size:13px}.validation-user small{display:block;color:var(--muted);font-size:11px}.validation-body{padding:25px}.success-banner{padding:28px 20px;text-align:center;background:#edfaf3;border:1px solid #ccefd9;border-radius:13px}.success-icon{width:52px;height:52px;margin:0 auto 12px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:#fff;font-size:27px;font-weight:900}.success-banner strong{display:block;color:#087b3d;font-size:19px}.success-banner p{margin:6px 0 0;color:var(--muted);font-size:14px}.validation-details{margin:18px 0 0}.validation-detail{display:flex;justify-content:space-between;gap:20px;padding:12px 3px;border-bottom:1px solid var(--line);font-size:14px}.validation-detail span:first-child{color:var(--muted)}.validation-detail b{text-align:right}.validation-actions{display:flex;gap:12px;margin-top:24px}.validation-actions button{flex:1}.login-screen{position:fixed;inset:0;z-index:100;display:grid;place-items:center;overflow:auto;padding:100px 24px 140px;background:linear-gradient(180deg,rgba(4,20,10,.13),rgba(4,20,10,.06) 55%,rgba(4,20,10,.42)),url('bhoominex-login-background.jpeg') center/cover}.login-screen.hidden{display:none}.login-top{position:absolute;top:42px;left:48px;right:48px;display:flex;justify-content:space-between;align-items:center;color:#fff}.login-badge{padding:12px 23px;border:1px solid #ffffff38;border-radius:999px;background:#075222;font-size:18px;font-weight:750;box-shadow:0 6px 16px #001a0d66}.language{padding:13px 20px;border:1px solid #ffffff55;border-radius:10px;background:#17352e91;font-size:18px}.login-card{width:min(570px,100%);padding:61px 50px 39px;border-radius:27px;background:rgba(250,253,248,.95);box-shadow:0 30px 60px #00170d75;border-top:8px solid #25853b;backdrop-filter:blur(2px)}.login-card h1{text-align:center;margin:0 0 7px;font-size:35px;letter-spacing:-.6px}.login-card h1 span{color:#21833d}.login-card>p{font-size:18px;margin-bottom:36px}.login-field{gap:9px;margin-bottom:25px;font-size:18px}.login-field input{padding:17px 20px;border:2px solid #d4e6cc;border-radius:14px;font-size:18px;background:#fcfefa}.login-field input:focus{border-color:var(--green);box-shadow:0 0 0 4px #07944720}.login-forgot{display:block;text-align:right;margin:-4px 0 27px;color:#167936;font-size:17px;font-weight:700;text-decoration:none}.login-card .primary{padding:16px;border-radius:14px;font-size:21px;background:#7fa98b;box-shadow:0 11px 22px #104e2533}.login-card .primary:hover{background:var(--green-dark)}.login-signup{text-align:center;color:#647369;font-size:17px;margin:28px 0 0}.login-signup b{color:#0f622b;cursor:pointer}.login-note{text-align:center;font-size:15px;color:#1d6536;margin:25px 0 0;font-weight:700}.login-caption{position:absolute;left:5%;bottom:172px;max-width:500px;color:#fff;font-weight:850;font-size:31px;line-height:1.38;text-shadow:0 3px 14px #001508bb}.login-quote{position:absolute;right:6%;top:18%;max-width:370px;text-align:right;color:#fff;font-size:19px;font-style:italic;line-height:1.5;text-shadow:0 2px 10px #001508aa}.login-footer{position:absolute;bottom:28px;display:flex;gap:56px;flex-wrap:wrap;justify-content:center;color:#effff4;font-size:17px;font-weight:700;text-shadow:0 2px 8px #001508aa}
+.login-card{display:flex;flex-direction:column;align-items:stretch}.login-card>*{width:100%}.login-card>h1,.login-card>p{text-align:center}.login-card>p.login-signup{margin:28px 0 0;color:#647369;font-size:17px}.login-card>p.login-note{margin:25px 0 0;color:#1d6536;font-size:15px;font-weight:700}.login-card .login-field{align-items:stretch;text-align:left}.login-card .login-forgot{width:auto;align-self:flex-end}.login-card .primary{width:100%}
+@media(max-width:900px){.sidebar{width:78px}.sidebar .brand span,.sidebar .nav span{display:none}.sidebar .nav{justify-content:center}.main{margin-left:78px;width:calc(100% - 78px)}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.motto{display:none}.cards{grid-template-columns:1fr}}
+@media(max-width:600px){.content{padding:18px 14px}.topbar{padding:0 15px}.stats{grid-template-columns:1fr}.profile div:last-child{display:none}.hero h1{font-size:23px}th,td{padding:10px 7px}.validation-head,.validation-body{padding:16px}.validation-user>div:last-child{display:none}.validation-actions{flex-direction:column}.login-top{left:18px;right:18px}.login-footer{bottom:16px;gap:12px 20px}.login-card{padding:27px 23px}}
+@media(max-width:900px){.login-caption,.login-quote{display:none}.login-card{width:min(470px,100%);padding:42px 34px}.login-card h1{font-size:29px}.login-footer{gap:22px;font-size:14px}}@media(max-width:600px){.login-top{top:20px}.login-badge,.language{padding:8px 12px;font-size:13px}.login-card{padding:29px 23px;border-radius:20px}.login-card h1{font-size:25px}.login-card>p,.login-field,.login-forgot,.login-signup{font-size:14px}.login-field{margin-bottom:17px}.login-field input{padding:12px}.login-card .primary{padding:12px;font-size:17px}}
+@media(max-height:800px){.login-screen{display:flex;align-items:flex-start;justify-content:center;padding:24px 18px;overflow-y:auto}.login-top,.login-footer{display:flex}.login-card{width:min(430px,100%);padding:30px 34px 28px;border-radius:22px}.login-card h1{font-size:26px}.login-card>p{font-size:15px;margin-bottom:22px}.login-field{font-size:15px;margin-bottom:15px}.login-field input{padding:12px 14px;font-size:16px}.login-forgot{font-size:14px;margin:-2px 0 17px}.login-card .primary{padding:12px;font-size:17px}.login-card>p.login-signup{font-size:14px;margin-top:18px}.login-card>p.login-note{font-size:12px;margin-top:17px}}
+.login-card{width:min(520px,calc(100% - 36px);padding:42px 42px 30px}.language-picker{position:relative}.language{border:0;cursor:pointer}.language-menu{position:absolute;right:0;top:calc(100% + 8px);display:none;min-width:145px;padding:6px;border-radius:10px;background:#fff;box-shadow:0 10px 24px #00170840}.language-menu.show{display:grid;gap:2px}.language-option{border:0;background:transparent;padding:9px 10px;border-radius:7px;text-align:left;color:#173d28;font-weight:650;cursor:pointer}.language-option:hover,.language-option:focus{background:#e9f8ef;outline:none}.login-footer{display:flex;align-items:center;justify-content:center;gap:26px;padding:11px 24px;background:linear-gradient(90deg,rgba(4,45,19,.72),rgba(4,45,19,.32));border-top:1px solid rgba(255,255,255,.2);z-index:101}.login-feature{display:flex;align-items:center;gap:7px;color:#fff;font-size:13px;font-weight:750;text-shadow:0 2px 6px #001508}.login-feature small{display:block;font-size:9px;font-weight:550;opacity:.92}.login-feature-icon{display:grid;place-items:center;width:25px;height:25px;border:1.5px solid #dff5e4;border-radius:50%;font-size:13px}.login-governance{margin-left:32px;color:#fff;font-size:12px;font-weight:700;text-shadow:0 2px 6px #001508}.login-top{z-index:105}.login-card{z-index:2}@media(max-width:900px){.login-card{width:min(440px,calc(100% - 36px);padding:34px 32px 27px}.login-footer{gap:14px}.login-governance{display:none}}@media(max-height:800px){.login-screen{padding:64px 18px 78px;align-items:center}.login-top{display:flex;top:15px;left:18px;right:18px}.login-badge{display:none}.language{padding:9px 12px;font-size:13px}.login-card{width:min(390px,calc(100% - 36px);padding:25px 30px 22px}.login-card h1{font-size:24px}.login-footer{display:flex;position:fixed;left:0;right:0;bottom:0;gap:9px;padding:8px 10px}.login-feature{gap:4px;font-size:10px}.login-feature small{display:none}.login-feature-icon{width:20px;height:20px;font-size:11px}}
+@media(max-height:800px){.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:64px 18px 18px;overflow-y:auto}.login-card{flex:none}.login-footer{position:static;width:100%;margin-top:14px;flex:none}}
+</style>
+</head>
+<body>
+<section class="login-screen" id="loginScreen" aria-label="BhoomiNex login">
+  <div class="login-top"><span class="login-badge">1. Login Page</span><div class="language-picker"><button class="language" id="languageButton" type="button" aria-expanded="false">English ▾</button><div class="language-menu" id="languageMenu"><button class="language-option" type="button" data-language="English">English</button><button class="language-option" type="button" data-language="हिन्दी">हिन्दी</button><button class="language-option" type="button" data-language="ਪੰਜਾਬੀ">ਪੰਜਾਬੀ</button></div></div></div>
+  <div class="login-caption">Digitizing India's Land Records<br>For a Transparent Tomorrow</div>
+  <div class="login-quote">“Land Records Digitized Today, A Better Tomorrow for Every Indian.”</div>
+  <form class="login-card" id="loginForm">
+    <h1>Welcome to <span>BhoomiNex</span></h1><p id="loginSubtitle">Login to access your account</p>
+    <label class="login-field">Email<input id="loginEmail" type="email" placeholder="you@bhoominex.gov.in" autocomplete="email" required></label>
+    <label class="login-field">Password<input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" required minlength="6"></label>
+    <a class="login-forgot" href="#" id="forgotPassword">Forgot Password?</a><button class="primary" type="submit" id="loginSubmitBtn">Login</button>
+    <p class="login-signup" id="signupToggleWrap"><span id="signupToggleText">Don't have an account? </span><b id="toggleSignupBtn" role="button" tabindex="0">Sign up</b></p><p class="login-note">🇮🇳 Building a Digitally Empowered India</p>
+  </form>
+  <div class="login-footer"><div class="login-feature"><span class="login-feature-icon">♢</span><span>Secure<small>Records</small></span></div><div class="login-feature"><span class="login-feature-icon">♧</span><span>Smart<small>Systems</small></span></div><div class="login-feature"><span class="login-feature-icon">↗</span><span>Scalable<small>Foundation</small></span></div><div class="login-feature"><span class="login-feature-icon">✦</span><span>For a<small>Better India</small></span></div><span class="login-governance">One Nation | One Platform | Smarter Land Governance</span></div>
+</section>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><img src="bhoominex-logo.png" alt="BhoomiNex"><span><strong>BhoomiNex</strong></span></div>
+  <nav class="menu">
+    <button class="nav active" data-view="dashboard"><span class="icon">⌂</span><span>Dashboard</span></button>
+    <button class="nav" data-view="upload"><span class="icon">⇧</span><span>Upload Record</span></button>
+    <button class="nav" data-view="validation"><span class="icon">✓</span><span>Validation Result</span></button>
+    <button class="nav" data-view="verify"><span class="icon">⚖</span><span>Human Verification</span></button>
+    <button class="nav" data-view="records"><span class="icon">▣</span><span>View Records</span></button>
+    <button class="nav" data-view="search"><span class="icon">⌕</span><span>Search</span></button>
+    <button class="nav" data-view="analytics"><span class="icon">▥</span><span>Analytics</span></button>
+    <button class="nav" data-view="map"><span class="icon">⌖</span><span>Map View</span></button>
+    <button class="nav" data-view="users"><span class="icon">♟</span><span>Users</span></button>
+    <button class="nav" data-view="settings"><span class="icon">⚙</span><span>Settings</span></button>
+    <button class="nav" id="logoutBtn"><span class="icon">↪</span><span>Logout</span></button>
+  </nav>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div class="top-left"><button class="hamb" id="hamb">☰</button><span class="page-title" id="pageTitle">Dashboard</span></div>
+  <div class="top-right">
+    <button class="bell" id="bell" title="Notifications">♧<i class="dot"></i></button>
+    <button class="profile" id="profileBtn"><div class="avatar">A</div><div><b>Admin</b><small>Government Officer</small></div></button>
+  </div>
+</header>
+
+<section class="content">
+<!-- Dashboard -->
+<div class="view active" id="dashboard">
+  <div class="hero"><div><h1>Welcome, Admin</h1><p>Together for a Transparent and Digitally Empowered India</p></div><div class="motto"><b>One Nation | One Land Database</b><div>Digitize &nbsp;•&nbsp; Validate &nbsp;•&nbsp; Secure &nbsp;•&nbsp; Serve</div></div></div>
+  <div class="stats">
+    <div class="card stat"><div class="sicon blue">▣</div><div><b id="totalCount">125</b><small>Total Records</small></div></div>
+    <div class="card stat"><div class="sicon green">▤</div><div><b id="processedCount">98</b><small>Processed</small></div></div>
+    <div class="card stat"><div class="sicon purple">◇</div><div><b id="verifiedCount">82</b><small>Verified</small></div></div>
+    <div class="card stat"><div class="sicon orange">!</div><div><b id="reviewCount">16</b><small>Needs Review</small></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card panel"><div class="panel-head"><h2>Recent Uploads</h2><button class="secondary" id="uploadQuick">+ Upload</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>File Name</th><th>State</th><th>Uploaded On</th><th>Status</th><th>Action</th></tr></thead><tbody id="recentBody"></tbody></table></div></div>
+    <div class="card panel"><div class="panel-head"><h2>Records by State</h2></div><div class="donut-area"><div class="donut"><div class="donut-center" id="donutTotal">125<small>Total</small></div></div><div class="legend"><span><i class="sw" style="background:#258bd2"></i>Haryana</span><span><i class="sw" style="background:#19a56a"></i>Uttar Pradesh</span><span><i class="sw" style="background:#68727a"></i>Rajasthan</span><span><i class="sw" style="background:#7d50c9"></i>Maharashtra</span><span><i class="sw" style="background:#87b84d"></i>Tamil Nadu</span><span><i class="sw" style="background:#e65d55"></i>Others</span></div></div></div>
+  </div>
+</div>
+
+<!-- Upload -->
+<div class="view" id="upload"><div class="card panel"><div class="panel-head"><h2>Upload Land Record</h2></div><p style="color:var(--muted)">Add a new land document to the digital record system.</p><div class="drop"><div style="font-size:38px">⇧</div><b>Select a PDF, JPG, PNG or document</b><p style="color:var(--muted)">Files are stored locally in this demo.</p><input id="fileInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></div><div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px"><input class="input" id="stateInput" placeholder="State (e.g. Haryana)"><select class="input" id="statusInput"><option>Processed</option><option>Verified</option><option>Needs Review</option></select></div><div class="modal-actions"><button class="primary" id="saveUpload">Upload Record</button></div></div></div>
+
+<!-- Validation Result -->
+<div class="view" id="validation"><div class="validation-shell"><div class="step-label">✓&nbsp; 6. Validation Result</div><div class="card validation-card"><div class="validation-head"><div class="validation-brand"><span class="validation-mark">◉</span> BhoomiNex <span style="color:#9aa4aa;font-size:15px">☰</span></div><div class="validation-user"><span style="color:#9aa4aa;font-size:19px">♧</span><div class="avatar">A</div><div><b>Admin</b><small>Government Officer</small></div></div></div><div class="validation-body"><div class="success-banner"><div class="success-icon">✓</div><strong>Record Validated Successfully!</strong><p>The extracted information is complete and consistent.</p></div><div class="validation-details" id="validationDetails"></div><div class="validation-actions"><button class="secondary" id="viewDatabase">View in Database</button><button class="primary" id="processAnother">Process Another&nbsp; →</button></div></div></div></div></div>
+
+<!-- Records -->
+<div class="view" id="records"><div class="card panel"><div class="panel-head"><h2>All Records</h2><button class="primary" id="uploadFromRecords">+ New Record</button></div><div class="toolbar"><input class="input" id="recordFilter" placeholder="Filter records..."></div><div class="table-wrap"><table><thead><tr><th>#</th><th>File Name</th><th>State</th><th>Uploaded On</th><th>Status</th><th>Action</th></tr></thead><tbody id="recordsBody"></tbody></table></div></div></div>
+
+<!-- Search -->
+<div class="view" id="search"><div class="card panel"><h2>Search Land Records</h2><p style="color:var(--muted)">Search by file name, state or status.</p><div class="toolbar"><input class="input" style="flex:1" id="globalSearch" placeholder="Try: Haryana, khata, verified..."><button class="primary" id="searchBtn">Search</button></div><div id="searchResults"></div></div></div>
+
+<!-- Analytics -->
+<div class="view" id="analytics"><div class="hero"><div><h1>Analytics</h1><p>Operational overview of digitized land records.</p></div></div><div class="cards"><div class="card mini"><h3>Verification Rate</h3><p style="font-size:30px;font-weight:800;color:var(--green)" id="verifyRate">66%</p></div><div class="card mini"><h3>Processing Rate</h3><p style="font-size:30px;font-weight:800;color:#258bd2" id="processRate">78%</p></div><div class="card mini"><h3>Pending Review</h3><p style="font-size:30px;font-weight:800;color:var(--orange)" id="pendingRate">16</p></div></div><div class="card panel" style="margin-top:18px"><h2>Processing Overview</h2><div style="display:grid;gap:18px;margin-top:22px"><div><b>Processed</b><div style="height:18px;background:#edf2f4;border-radius:10px;margin-top:8px"><div id="barProcessed" style="height:100%;width:78%;background:#258bd2;border-radius:10px"></div></div></div><div><b>Verified</b><div style="height:18px;background:#edf2f4;border-radius:10px;margin-top:8px"><div id="barVerified" style="height:66%;background:#19a56a;border-radius:10px"></div></div></div></div></div></div>
+
+<!-- Map -->
+<div class="view" id="map"><div class="hero"><div><h1>Map View</h1><p>Per-record parcel locations across India — precise where geometry has been imported, approximate otherwise.</p></div></div><div class="map card"><div id="leafletMap"></div></div><div style="display:flex;gap:22px;margin-top:12px;color:var(--muted);font-size:13px;flex-wrap:wrap"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#19a56a;margin-right:6px"></span>Real geometry imported (point or parcel boundary)</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e9c98a;border:1px dashed #b98a3d;margin-right:6px"></span>Approximate (state centroid — no import yet)</span></div></div>
+
+<!-- Human Verification (side-by-side) -->
+<div class="view" id="verify">
+  <div class="hero"><div><h1>Human Verification</h1><p>Compare the source document against AI-extracted fields, then approve or send back.</p></div></div>
+  <div class="card panel" style="margin-bottom:18px">
+    <div class="panel-head"><h2>Pending queue</h2><span id="verifyQueueCount" class="status review"></span></div>
+    <div id="verifyQueue"></div>
+  </div>
+  <div class="verify-cols">
+    <div class="card panel">
+      <div class="panel-head"><h2>Source document</h2><span id="verifyDocMeta" style="color:var(--muted);font-size:13px"></span></div>
+      <div class="doc-area" id="verifyDocArea"><div class="empty">Pick a record from the queue above.</div></div>
+    </div>
+    <div class="card panel">
+      <div class="panel-head"><h2>AI-extracted fields</h2><b id="verifyRecordId" style="color:var(--muted);font-size:13px"></b></div>
+      <div id="verifyFieldsArea"><div class="empty">No record selected.</div></div>
+      <div id="verifyNotesArea"></div>
+      <div class="modal-actions" style="margin-top:18px" id="verifyActions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Users -->
+<div class="view" id="users"><div class="card panel"><div class="panel-head"><h2>Users</h2><button class="primary" id="addUser">+ Add User</button></div><table><thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Status</th><th>Action</th></tr></thead><tbody id="usersBody"></tbody></table></div></div>
+
+<!-- Settings -->
+<div class="view" id="settings"><div class="card panel"><h2>Settings</h2><div class="setting"><div><b>Email notifications</b><p style="color:var(--muted);margin:5px 0 0">Receive alerts about records needing review.</p></div><button class="toggle on" data-setting="email"></button></div><div class="setting"><div><b>Auto-validation</b><p style="color:var(--muted);margin:5px 0 0">Run validation after every upload.</p></div><button class="toggle on" data-setting="validation"></button></div><div class="setting"><div><b>Compact dashboard</b><p style="color:var(--muted);margin:5px 0 0">Use a denser table and card layout.</p></div><button class="toggle" data-setting="compact"></button></div></div></div>
+</section>
+</main>
+</div>
+
+<div class="modal-back" id="detailModal"><div class="modal"><h2 id="modalTitle">Record Details</h2><div id="modalBody"></div><div id="geometryBody" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"></div><div class="modal-actions"><button class="secondary" id="closeModal">Close</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// BhoomiNex ↔ backend wiring. Same markup/CSS as the standalone demo; this
+// replaces the old localStorage logic with real calls to the FastAPI
+// backend in backend/main.py. See backend/README_BACKEND.md for the full
+// UI-action → endpoint map.
+// ---------------------------------------------------------------------------
+const API_BASE="http://127.0.0.1:8000"; // change if your backend runs elsewhere
+
+// ---- Supabase auth (login component) ---------------------------------
+// Fill these in from Supabase Dashboard → Project Settings → API.
+const SUPABASE_URL="https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY="YOUR-ANON-PUBLIC-KEY";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let authMode="signin";
+// Supabase now decides who gets in. This seeded account is used only in the
+// background, after Supabase confirms identity, so the existing dashboard/
+// records calls (which still run on the FastAPI backend's own token) keep
+// working. See backend/seed_data.py.
+const DEMO_BACKEND_USER={username:"admin",password:"demo123"};
+
+let token=null, currentUser=null, validationRecord=null;
+let leafletMap=null, leafletMarkers=null;
+const STATE_COORDS={
+ "Haryana":[29.0588,76.0856],"Uttar Pradesh":[26.8467,80.9462],"Rajasthan":[27.0238,74.2179],
+ "Tamil Nadu":[11.1271,78.6569],"Maharashtra":[19.7515,75.7139],"Punjab":[31.1471,75.3412],
+ "Gujarat":[22.2587,71.1924],"Karnataka":[15.3173,75.7139],"West Bengal":[22.9868,87.8550],
+ "Bihar":[25.0961,85.3131],"Madhya Pradesh":[22.9734,78.6569],"Kerala":[10.8505,76.2711],
+ "Delhi":[28.7041,77.1025],"Andhra Pradesh":[15.9129,79.7400],"Telangana":[18.1124,79.0193],
+ "Odisha":[20.9517,85.0985],"Assam":[26.2006,92.9376],"__default":[22.3511,78.6677]
+};
+const FIELD_LIST=[["owner","Owner name"],["khasra","Khasra number"],["khata","Khata number"],["village","Village"],["tehsil","Tehsil"],["district","District"],["area","Area"],["mutation_no","Mutation number"]];
+
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function statusClass(s){return s==="Verified"?"verified":s==="Processed"?"processed":"review"}
+function confClass(c){if(c==null)return"conf-medium";if(c>=85)return"conf-high";if(c>=60)return"conf-medium";return"conf-low"}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}catch(_e){return iso}}
+
+// ---- API helper -----------------------------------------------------------
+async function api(path,opts={}){
+  const headers=Object.assign({},opts.headers||{});
+  if(token)headers["Authorization"]="Bearer "+token;
+  if(opts.body && !(opts.body instanceof FormData) && !headers["Content-Type"])headers["Content-Type"]="application/json";
+  const res=await fetch(API_BASE+path,Object.assign({},opts,{headers}));
+  if(res.status===401 && path!=="/api/auth/login"){forceLogout();throw new Error("Session expired — please log in again.")}
+  if(!res.ok){
+    let msg=`Request failed (${res.status})`;
+    try{const j=await res.json();msg=j.detail||msg}catch(_e){}
+    throw new Error(msg);
+  }
+  const ct=res.headers.get("content-type")||"";
+  return ct.includes("application/json")?res.json():res;
+}
+function forceLogout(){token=null;currentUser=null;localStorage.removeItem("bhoominex_token");$("#loginScreen").classList.remove("hidden")}
+function applyUserChrome(){
+  if(!currentUser)return;
+  const initial=(currentUser.name.trim()[0]||"A").toUpperCase();
+  const profileBtn=$("#profileBtn");
+  if(profileBtn){profileBtn.querySelector(".avatar").textContent=initial;profileBtn.querySelector("b").textContent=currentUser.name;profileBtn.querySelector("small").textContent=currentUser.role}
+  const valUser=document.querySelector(".validation-user");
+  if(valUser){valUser.querySelector(".avatar").textContent=initial;valUser.querySelector("b").textContent=currentUser.name;valUser.querySelector("small").textContent=currentUser.role}
+}
+
+// ---- Table rows -------------------------------------------------------
+function row(r,i){return `<tr><td>${i+1}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.state)}</td><td>${esc(r.date)}</td><td><span class="status ${statusClass(r.status)}">${esc(r.status)}</span></td><td><button class="action" data-id="${esc(r.id)}">View</button></td></tr>`}
+function wireRowActions(sel){$$(`${sel} .action`).forEach(b=>b.onclick=()=>showRecord(b.dataset.id))}
+
+// ---- Dashboard / records / analytics / map ---------------------------
+async function loadDashboard(){
+  const d=await api("/api/dashboard");
+  $("#totalCount").textContent=d.total;$("#processedCount").textContent=d.processed;
+  $("#verifiedCount").textContent=d.verified;$("#reviewCount").textContent=d.needs_review;
+  $("#donutTotal").innerHTML=`${d.total}<small>Total</small>`;
+  $("#recentBody").innerHTML=d.recent.map(row).join("")||`<tr><td colspan="6" class="empty">No uploads yet.</td></tr>`;
+  wireRowActions("#recentBody");
+}
+async function loadRecords(){
+  const rows=await api("/api/records");
+  $("#recordsBody").innerHTML=rows.map(row).join("")||`<tr><td colspan="6" class="empty">No records.</td></tr>`;
+  wireRowActions("#recordsBody");
+}
+async function loadAnalytics(){
+  const a=await api("/api/analytics");
+  $("#verifyRate").textContent=a.verify_rate+"%";$("#processRate").textContent=a.process_rate+"%";$("#pendingRate").textContent=a.pending_review;
+  $("#barVerified").style.width=a.verify_rate+"%";$("#barProcessed").style.width=a.process_rate+"%";
+}
+// Per-record Map View: real point/polygon geometry when a record has had a
+// shapefile/GeoJSON imported (see the "Import geometry" control in the
+// record detail modal), otherwise an approximate state-centroid marker so
+// every record still shows up somewhere.
+async function loadMap(){
+  const features=await api("/api/map");
+  if(!leafletMap){
+    leafletMap=L.map("leafletMap",{scrollWheelZoom:false}).setView([22.9,79.0],5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"&copy; OpenStreetMap contributors",maxZoom:18}).addTo(leafletMap);
+    leafletMarkers=L.layerGroup().addTo(leafletMap);
+  }
+  leafletMarkers.clearLayers();
+  const bounds=[];
+  const popupHtml=f=>`<b>${esc(f.name)}</b><br>${esc(f.owner||"—")} · Khasra ${esc(f.khasra||"—")}<br>${esc(f.village||"—")}, ${esc(f.state)}<br><span class="status ${statusClass(f.status)}">${esc(f.status)}</span>`
+    +(f._approx?`<br><small style="color:#94734a">Approximate — no parcel geometry imported yet</small>`:"");
+
+  features.forEach(f=>{
+    let point=null, isApprox=false;
+    if(f.latitude!=null && f.longitude!=null){
+      point=[f.latitude,f.longitude];
+    }else{
+      point=STATE_COORDS[f.state]||STATE_COORDS.__default;
+      isApprox=true;
+    }
+    f._approx=isApprox;
+
+    if(f.geometry){
+      const layer=L.geoJSON(f.geometry,{
+        style:{color:"#079447",weight:2,fillColor:"#19a56a",fillOpacity:.35},
+        pointToLayer:(_feat,latlng)=>L.circleMarker(latlng,{radius:9,color:"#079447",fillColor:"#19a56a",fillOpacity:.75,weight:2}),
+      }).bindPopup(popupHtml(f));
+      layer.addTo(leafletMarkers);
+      try{bounds.push(layer.getBounds())}catch(_e){}
+    }else{
+      L.circleMarker(point,{
+        radius:isApprox?7:9,
+        color:isApprox?"#b98a3d":"#079447",
+        fillColor:isApprox?"#e9c98a":"#19a56a",
+        fillOpacity:isApprox?.45:.75,
+        weight:isApprox?1.5:2,
+        dashArray:isApprox?"3,3":null,
+      }).bindPopup(popupHtml(f)).addTo(leafletMarkers);
+      bounds.push(L.latLngBounds([point,point]));
+    }
+  });
+
+  if(bounds.length){
+    let all=bounds[0];
+    bounds.slice(1).forEach(b=>all=all.extend(b));
+    leafletMap.fitBounds(all.pad(0.3),{maxZoom:11});
+  }
+  setTimeout(()=>leafletMap.invalidateSize(),60);
+}
+
+// ---- Validation Result --------------------------------------------------
+function renderValidation(){
+  const r=validationRecord;
+  if(!r){$("#validationDetails").innerHTML=`<div class="empty">Process a document to see its validation result.</div>`;return}
+  const rows=[["Record ID",r.id],["State",r.state],["District",r.district],["Village",r.village],["Khasra Number",r.khasra],["Owner Name",r.owner],["Area",r.area]];
+  $("#validationDetails").innerHTML=rows.map(([label,value])=>`<div class="validation-detail"><span>${label}</span><b>${esc(value||"—")}</b></div>`).join("")+`<div class="validation-detail"><span>Status</span><b><span class="status ${statusClass(r.status)}">${esc(r.status)}</span></b></div>`;
+}
+
+// ---- Record detail modal --------------------------------------------------
+async function showRecord(id){
+  try{
+    const r=await api(`/api/records/${id}`);
+    $("#modalTitle").textContent=r.file_name;
+    const notes=(r.validation_notes||[]).map(esc).join("<br>");
+    $("#modalBody").innerHTML=`<p><b>State:</b> ${esc(r.state)}</p><p><b>Uploaded:</b> ${fmtDate(r.uploaded_on)}</p><p><b>Status:</b> <span class="status ${statusClass(r.status)}">${esc(r.status)}</span></p><p><b>Owner:</b> ${esc(r.owner||"—")} &nbsp; <b>Khasra:</b> ${esc(r.khasra||"—")}</p><p><b>Village / District:</b> ${esc(r.village||"—")}, ${esc(r.district||"—")}</p><p><b>Confidence:</b> ${r.confidence}%</p>${notes?`<p style="color:var(--muted)">${notes}</p>`:""}`;
+    renderGeometryPanel(r);
+    $("#detailModal").classList.add("show");
+  }catch(e){toast(e.message)}
+}
+
+// ---- Per-record GIS geometry: import / view / remove -----------------------
+function renderGeometryPanel(r){
+  const hasGeo=r.latitude!=null && r.longitude!=null;
+  const summary=hasGeo
+    ? `<p><b>Location:</b> ${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)} ${r.geometry?"· parcel boundary imported":"· point only"}</p>`
+      +`<p style="color:var(--muted);font-size:13px">${esc(r.geometry_source||"—")}${r.geometry_filename?" · "+esc(r.geometry_filename):""}${r.geometry_crs_note?" · "+esc(r.geometry_crs_note):""}</p>`
+    : `<p style="color:var(--muted)">No real coordinates yet — this record shows on Map View at its state's approximate centroid.</p>`;
+  $("#geometryBody").innerHTML=`<b>Parcel geometry</b>${summary}`
+    +`<div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">`
+    +`<input type="file" id="geometryFile" accept=".geojson,.json,.zip" style="flex:1;min-width:180px">`
+    +`<button class="secondary" id="geometryImportBtn">${hasGeo?"Replace":"Import"} geometry</button>`
+    +(hasGeo?`<button class="secondary" id="geometryRemoveBtn">Remove</button>`:"")
+    +`</div><p style="color:var(--muted);font-size:12px;margin-top:6px">Accepts a .geojson/.json file, or a .zip containing a shapefile (.shp/.shx/.dbf, ideally .prj).</p>`;
+  $("#geometryImportBtn").onclick=()=>importGeometry(r.id);
+  if(hasGeo)$("#geometryRemoveBtn").onclick=()=>removeGeometry(r.id);
+}
+async function importGeometry(id){
+  const f=$("#geometryFile").files[0];
+  if(!f){toast("Choose a .geojson or shapefile .zip first.");return}
+  const fd=new FormData();fd.append("file",f);
+  try{
+    await api(`/api/records/${id}/geometry`,{method:"POST",body:fd});
+    toast("Parcel geometry imported.");
+    const r=await api(`/api/records/${id}`);
+    renderGeometryPanel(r);
+    if(document.querySelector("#map").classList.contains("active"))await loadMap();
+  }catch(e){toast(e.message)}
+}
+async function removeGeometry(id){
+  try{
+    await api(`/api/records/${id}/geometry`,{method:"DELETE"});
+    toast("Geometry removed — back to the approximate state centroid.");
+    const r=await api(`/api/records/${id}`);
+    renderGeometryPanel(r);
+    if(document.querySelector("#map").classList.contains("active"))await loadMap();
+  }catch(e){toast(e.message)}
+}
+
+// ---- Human verification (side-by-side) ------------------------------------
+async function loadVerifyQueue(){
+  const rows=await api("/api/records");
+  const pending=rows.filter(r=>r.status!=="Verified");
+  $("#verifyQueueCount").textContent=pending.length+" pending";
+  if(!pending.length){
+    $("#verifyQueue").innerHTML=`<div class="queue-empty">Nothing waiting on a human right now — every record is Verified.</div>`;
+    $("#verifyDocArea").innerHTML=`<div class="empty">Pick a record from the queue above.</div>`;
+    $("#verifyFieldsArea").innerHTML=`<div class="empty">No record selected.</div>`;
+    $("#verifyRecordId").textContent="";$("#verifyActions").innerHTML="";$("#verifyNotesArea").innerHTML="";$("#verifyDocMeta").textContent="";
+    return;
+  }
+  $("#verifyQueue").innerHTML=pending.map(r=>`<div class="queue-pick" data-id="${esc(r.id)}"><div><b>${esc(r.name)}</b><small>${esc(r.state)} · ${esc(r.date)}</small></div><span class="status ${statusClass(r.status)}">${esc(r.status)}</span></div>`).join("");
+  $$("#verifyQueue .queue-pick").forEach(el=>el.onclick=()=>selectVerifyRecord(el.dataset.id));
+  await selectVerifyRecord(pending[0].id);
+}
+async function selectVerifyRecord(id){
+  $$("#verifyQueue .queue-pick").forEach(p=>p.classList.toggle("active",p.dataset.id===id));
+  try{
+    const detail=await api(`/api/records/${id}`);
+    renderVerifyFields(detail);
+    $("#verifyDocMeta").textContent=detail.file_name;
+    $("#verifyDocArea").innerHTML=`<div class="empty">Loading source document…</div>`;
+    const res=await fetch(`${API_BASE}/api/records/${id}/file`,{headers:{Authorization:"Bearer "+token}});
+    if(!res.ok){$("#verifyDocArea").innerHTML=`<div class="empty">No source scan stored for this record (seeded demo record). Upload a new document to see the full side-by-side view.</div>`;return}
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    $("#verifyDocArea").innerHTML=blob.type.includes("pdf")?`<iframe src="${url}"></iframe>`:`<img src="${url}" alt="Source document">`;
+  }catch(e){toast(e.message)}
+}
+function renderVerifyFields(detail){
+  const fc=detail.field_confidence||{};
+  $("#verifyFieldsArea").innerHTML=FIELD_LIST.map(([key,label])=>{
+    const val=detail[key]||"";const conf=fc[key];const confLabel=conf==null?"—":conf+"%";
+    return `<div class="vfield"><div class="vfield-head"><b>${label}</b><span class="conf-badge ${confClass(conf)}">${confLabel}</span></div><input class="input" data-field="${key}" value="${esc(val)}"></div>`;
+  }).join("");
+  const notes=detail.validation_notes||[];
+  $("#verifyNotesArea").innerHTML=notes.length?`<div class="setting" style="border:0;padding-top:14px"><div><b>Validation notes</b><p style="color:var(--muted);margin:6px 0 0">${notes.map(esc).join("<br>")}</p></div></div>`:"";
+  $("#verifyRecordId").textContent=`${detail.id} · ${detail.status}`;
+  $("#verifyActions").innerHTML=`<button class="secondary" id="verifySendBack">Send back / Needs review</button><button class="primary" id="verifyApprove">Approve trusted record →</button>`;
+  $("#verifyApprove").onclick=()=>submitVerify(detail.id,"Verified");
+  $("#verifySendBack").onclick=()=>submitVerify(detail.id,"Needs Review");
+}
+async function submitVerify(id,statusValue){
+  const fields={};
+  $$("#verifyFieldsArea [data-field]").forEach(inp=>fields[inp.dataset.field]=inp.value.trim());
+  const payload={owner:fields.owner,khasra:fields.khasra,khata:fields.khata||null,village:fields.village,tehsil:fields.tehsil||null,district:fields.district,area:fields.area,mutation_no:fields.mutation_no||null,status:statusValue};
+  try{
+    const detail=await api(`/api/records/${id}/verify`,{method:"PUT",body:JSON.stringify(payload)});
+    validationRecord=detail;
+    toast(statusValue==="Verified"?"Record approved as trusted.":"Sent back for further review.");
+    await loadVerifyQueue();
+  }catch(e){toast(e.message)}
+}
+
+// ---- Users / settings -------------------------------------------------
+async function loadUsers(){
+  const users=await api("/api/users");
+  $("#usersBody").innerHTML=users.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.role)}</td><td>${esc(u.department)}</td><td><span class="status ${u.status==='Active'?'verified':'review'}">${esc(u.status)}</span></td><td><button class="action" data-id="${u.id}" data-username="${esc(u.username)}">Remove</button></td></tr>`).join("");
+  $$("#usersBody .action").forEach(b=>b.onclick=()=>removeUser(b.dataset.id,b.dataset.username));
+}
+async function removeUser(id,username){
+  if(username==="admin"){toast("Admin account cannot be removed.");return}
+  if(!confirm("Remove this user?"))return;
+  try{await api(`/api/users/${id}`,{method:"DELETE"});toast("User removed.");await loadUsers()}catch(e){toast(e.message)}
+}
+async function loadSettings(){
+  const s=await api("/api/settings");
+  $$(".toggle").forEach(t=>{
+    const key=t.dataset.setting==="email"?"email_notifications":t.dataset.setting==="validation"?"auto_validation":"compact_dashboard";
+    t.classList.toggle("on",!!s[key]);
+  });
+}
+function currentSettingsPayload(){
+  return{
+    email_notifications:$('.toggle[data-setting="email"]').classList.contains("on"),
+    auto_validation:$('.toggle[data-setting="validation"]').classList.contains("on"),
+    compact_dashboard:$('.toggle[data-setting="compact"]').classList.contains("on"),
+  };
+}
+
+// ---- Navigation ------------------------------------------------------
+async function go(view){
+  $$(".view").forEach(v=>v.classList.remove("active"));
+  $("#"+view).classList.add("active");
+  $$(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===view));
+  $("#pageTitle").textContent=view==="dashboard"?"Dashboard":view.replace(/^\w/,c=>c.toUpperCase()).replace("-"," ");
+  window.scrollTo(0,0);
+  try{
+    if(view==="dashboard")await loadDashboard();
+    else if(view==="records")await loadRecords();
+    else if(view==="analytics")await loadAnalytics();
+    else if(view==="map")await loadMap();
+    else if(view==="users")await loadUsers();
+    else if(view==="settings")await loadSettings();
+    else if(view==="verify")await loadVerifyQueue();
+    else if(view==="validation"){
+      if(!validationRecord){
+        const rows=await api("/api/records");
+        if(rows.length)validationRecord=await api(`/api/records/${rows[0].id}`);
+      }
+      renderValidation();
+    }
+  }catch(e){toast(e.message||"Failed to load data")}
+}
+$$(".nav[data-view]").forEach(n=>n.onclick=()=>go(n.dataset.view));
+$("#hamb").onclick=()=>$("#sidebar").classList.toggle("collapsed");
+$("#bell").onclick=()=>toast("You have notifications: check Human Verification for records needing review.");
+$("#profileBtn").onclick=()=>toast(`Signed in as ${currentUser?currentUser.name:"Admin"} — ${currentUser?currentUser.role:"Government Officer"}`);
+$("#languageButton").onclick=()=>{const menu=$("#languageMenu"),open=menu.classList.toggle("show");$("#languageButton").setAttribute("aria-expanded",String(open))};
+$$(".language-option").forEach(option=>option.onclick=()=>{const language=option.dataset.language;$("#languageButton").textContent=language+" ▾";$("#languageMenu").classList.remove("show");$("#languageButton").setAttribute("aria-expanded","false");document.documentElement.lang=language==="English"?"en":language==="हिन्दी"?"hi":"pa";toast("Language changed to "+language+".")});
+$("#uploadQuick").onclick=()=>go("upload");$("#uploadFromRecords").onclick=()=>go("upload");
+
+// ---- Upload -------------------------------------------------------------
+$("#saveUpload").onclick=async()=>{
+  const f=$("#fileInput").files[0];if(!f){toast("Choose a file first.");return}
+  const state=$("#stateInput").value.trim()||"Haryana";
+  const statusOverride=$("#statusInput").value;
+  const fd=new FormData();fd.append("file",f);fd.append("state",state);if(statusOverride)fd.append("status",statusOverride);
+  try{
+    const res=await api("/api/upload",{method:"POST",body:fd});
+    validationRecord=res.record;
+    $("#fileInput").value="";$("#stateInput").value="";
+    toast(res.message);
+    if(res.record.status==="Needs Review"){await go("verify");await selectVerifyRecord(res.record.id)}
+    else{await go("validation")}
+  }catch(e){toast(e.message)}
+};
+$("#viewDatabase").onclick=()=>go("records");$("#processAnother").onclick=()=>go("upload");
+$("#recordFilter").oninput=e=>{$$("#recordsBody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(e.target.value.toLowerCase())?"":"none")};
+
+// ---- Search ---------------------------------------------------------------
+$("#searchBtn").onclick=doSearch;$("#globalSearch").onkeydown=e=>{if(e.key==="Enter")doSearch()};
+async function doSearch(){
+  const q=$("#globalSearch").value.trim();
+  try{
+    const hits=await api("/api/records?q="+encodeURIComponent(q));
+    $("#searchResults").innerHTML=hits.length?`<table><thead><tr><th>#</th><th>File</th><th>State</th><th>Status</th><th>Action</th></tr></thead><tbody>${hits.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.state)}</td><td><span class="status ${statusClass(r.status)}">${esc(r.status)}</span></td><td><button class="action" data-id="${esc(r.id)}">View</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">No matching records found.</div>`;
+    $$("#searchResults .action").forEach(b=>b.onclick=()=>showRecord(b.dataset.id));
+  }catch(e){toast(e.message)}
+}
+
+// ---- Users / settings handlers --------------------------------------------
+$("#addUser").onclick=async()=>{
+  const name=prompt("New user's full name:");if(!name)return;
+  const username=prompt("Username:",name.toLowerCase().trim().replace(/\s+/g,"."));if(!username)return;
+  const password=prompt("Temporary password (min 4 characters):","changeme123");if(!password)return;
+  try{await api("/api/users",{method:"POST",body:JSON.stringify({username,password,name,role:"Operator",department:"Land Records"})});toast("User added.");await loadUsers()}
+  catch(e){toast(e.message)}
+};
+$$(".toggle").forEach(t=>t.onclick=async()=>{
+  t.classList.toggle("on");
+  try{await api("/api/settings",{method:"PUT",body:JSON.stringify(currentSettingsPayload())});toast((t.dataset.setting||"Setting")+" "+(t.classList.contains("on")?"enabled":"disabled"))}
+  catch(e){t.classList.toggle("on");toast(e.message)}
+});
+
+// ---- Modal / auth (Supabase) ------------------------------------------
+$("#closeModal").onclick=()=>$("#detailModal").classList.remove("show");
+$("#detailModal").onclick=e=>{if(e.target.id==="detailModal")e.currentTarget.classList.remove("show")};
+
+function setAuthMode(mode){
+  authMode=mode;
+  $("#loginSubtitle").textContent=mode==="signin"?"Login to access your account":"Create an account to get started";
+  $("#loginSubmitBtn").textContent=mode==="signin"?"Login":"Create account";
+  $("#signupToggleText").textContent=mode==="signin"?"Don't have an account? ":"Already have an account? ";
+  $("#toggleSignupBtn").textContent=mode==="signin"?"Sign up":"Sign in";
+}
+$("#toggleSignupBtn").onclick=()=>setAuthMode(authMode==="signin"?"signup":"signin");
+$("#toggleSignupBtn").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#toggleSignupBtn").click()}});
+
+$("#forgotPassword").onclick=async e=>{
+  e.preventDefault();
+  const email=$("#loginEmail").value.trim();
+  if(!email){toast("Enter your email above first, then tap Forgot Password.");return}
+  try{await sb.auth.resetPasswordForEmail(email);toast("Password reset link sent to "+email+".")}
+  catch(err){toast(err.message||"Could not send reset email.")}
+};
+
+$("#logoutBtn").onclick=async()=>{
+  if(confirm("Log out of the demo dashboard?")){
+    await sb.auth.signOut().catch(()=>{});
+    $("#loginEmail").value="";$("#loginPassword").value="";
+    forceLogout();toast("You have been logged out.")
+  }
+};
+
+async function onSupabaseAuthed(supabaseUser){
+  currentUser={
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.email.split("@")[0],
+    role: supabaseUser.user_metadata?.role || "Government Officer",
+    email: supabaseUser.email
+  };
+  applyUserChrome();$("#loginScreen").classList.add("hidden");toast("Welcome, "+currentUser.name+".");
+  // Bridge: Supabase has confirmed identity, so quietly fetch a backend
+  // session too (seeded demo account) purely so dashboard/records calls
+  // keep working — those still run on the FastAPI backend's own token.
+  try{
+    const data=await api("/api/auth/login",{method:"POST",body:JSON.stringify(DEMO_BACKEND_USER)});
+    token=data.access_token;localStorage.setItem("bhoominex_token",token);
+  }catch(_e){
+    toast("Signed in, but couldn't reach the backend for live data — is it running on "+API_BASE+"?");
+  }
+  await go("dashboard");
+}
+
+$("#loginForm").onsubmit=async e=>{
+  e.preventDefault();
+  const email=$("#loginEmail").value.trim(),password=$("#loginPassword").value;
+  const submitBtn=$("#loginSubmitBtn");submitBtn.disabled=true;
+  try{
+    if(authMode==="signup"){
+      const{data,error}=await sb.auth.signUp({email,password});
+      if(error)throw error;
+      if(!data.session){
+        toast("Account created — check "+email+" to confirm, then log in.");
+        setAuthMode("signin");
+        return;
+      }
+      await onSupabaseAuthed(data.user);
+    }else{
+      const{data,error}=await sb.auth.signInWithPassword({email,password});
+      if(error)throw error;
+      await onSupabaseAuthed(data.user);
+    }
+  }catch(err){toast(err.message||"Login failed. Check your email and password.")}
+  finally{submitBtn.disabled=false}
+};
+
+sb.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT")forceLogout()});
+
+// ---- Boot -------------------------------------------------------------
+(async function init(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user)await onSupabaseAuthed(session.user);
+})();
+</script>
+</body>
+</html>

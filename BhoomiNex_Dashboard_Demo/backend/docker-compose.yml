@@ -1,0 +1,34 @@
+# Local PostgreSQL for BHOOMI-AI.
+#
+# Usage:
+#   cd backend
+#   docker compose up -d
+#   cp .env.example .env
+#   # then in .env: comment the sqlite DATABASE_URL line and uncomment the
+#   # postgresql+psycopg2://bhoominex:bhoominex@localhost:5432/bhoominex line
+#   uvicorn main:app --reload --port 8000
+#
+# Tables + seed data are created automatically on startup (see seed_data.py),
+# same as with SQLite — no manual migration step needed for this MVP.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bhoominex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bhoominex
+      POSTGRES_PASSWORD: bhoominex
+      POSTGRES_DB: bhoominex
+    ports:
+      - "5432:5432"
+    volumes:
+      - bhoominex-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bhoominex"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bhoominex-pgdata:
